@@ -350,10 +350,12 @@ form.addEventListener('submit', (e) => {
     const estado = determinarSemaforo(metrics);
     renderResultados(metrics, estado);
     agregarAHistorial(metrics, estado);
+    scrollToResults();
   } catch (err) {
     statusCard.classList.remove('status--verde', 'status--amarillo', 'status--rojo');
     statusChip.textContent = 'Error en datos';
     statusMsg.textContent = err.message;
+    scrollToResults();
   }
 });
 
@@ -384,3 +386,13 @@ themeToggle.addEventListener('click', toggleTheme);
 
 updateLabels();
 setTheme(document.body.getAttribute('data-theme') || 'dark');
+
+function scrollToResults() {
+  if (window.innerWidth > 720) return;
+  const results = document.getElementById('seccion_resultados');
+  if (!results) return;
+  const topbar = document.querySelector('.topbar');
+  const offset = topbar ? topbar.offsetHeight + 10 : 0;
+  const target = results.getBoundingClientRect().top + window.scrollY - offset;
+  window.scrollTo({ top: target, behavior: 'smooth' });
+}

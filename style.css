@@ -135,6 +135,7 @@ input[type="number"]:focus { outline: none; border-color: var(--color-accent); b
 @media (max-width: 720px) {
   .page { padding: 20px 14px 36px; }
   .hero { align-items: flex-start; }
+  .form-card { position: static; top: auto; }
   .summary-card { flex-direction: column; }
   .floating-action { width: calc(100% - 24px); left: 12px; transform: none; }
 }
