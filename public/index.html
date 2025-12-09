@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evaluador de Flipping Inmobiliario</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+  <div class="topbar">
+    <div class="topbar__section">
+      <span class="topbar__title">Valor UF (CLP) <span class="help-icon" data-tooltip="Valor de referencia de la UF en CLP para convertir entre pesos y UF.">?</span></span>
+      <input type="number" id="valor_uf_input" value="39600" min="0" step="any">
+    </div>
+    <div class="topbar__actions">
+      <button type="button" id="theme_toggle" class="theme-toggle dark" aria-label="Cambiar tema">
+        <span class="theme-toggle__icon" id="theme_icon" aria-hidden="true">◐</span>
+        <span class="theme-toggle__text"><span class="theme-current" id="theme_label">Dark</span> / Light</span>
+      </button>
+      <button type="submit" id="btn_calcular" class="btn topbar-btn" form="form_calculo">Calcular rentabilidad</button>
+    </div>
+  </div>
+
+  <div class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Herramienta de decisión</p>
+        <h1>Evaluador de Flipping Inmobiliario</h1>
+        <p class="subhead">Ingresa los datos del proyecto para estimar la rentabilidad de un flipping inmobiliario.</p>
+      </div>
+    </header>
+
+    <main class="layout main-grid">
+      <section class="card form-card">
+        <form id="form_calculo" class="form" autocomplete="off">
+          <div class="field">
+            <span>Unidad</span>
+            <div class="toggle">
+              <label>
+                <input type="radio" name="unidad" id="unidad_clp" value="clp" checked>
+                <span>CLP</span>
+              </label>
+              <label>
+                <input type="radio" name="unidad" id="unidad_uf" value="uf">
+                <span>UF</span>
+              </label>
+            </div>
+            <p class="hint">Los montos se interpretan en la unidad seleccionada. Si usas UF, se convierten a CLP con el valor ingresado.</p>
+          </div>
+          <div class="block">
+            <div class="block__header">
+                <p class="block__eyebrow">A) Datos del Proyecto</p>
+                <p class="block__title">Ingresa los valores</p>
+              </div>
+
+              <div class="block__sub">
+                <p class="block__subtitle">Compra y mercado</p>
+                <div class="grid two">
+                  <label class="field">
+                  <span id="label_precio_compra">Precio Compra (CLP) <span class="help-icon" data-tooltip="Precio que pagarás por la propiedad, sin incluir gastos operacionales ni remodelación.">?</span></span>
+                  <input type="number" id="precio_compra" min="0" step="any" required>
+                </label>
+                <label class="field">
+                  <span>Metros (m²) <span class="help-icon" data-tooltip="Superficie de la propiedad en metros cuadrados (útiles o construidos según estés analizando).">?</span></span>
+                  <input type="number" id="metros" min="0" step="any" required>
+                </label>
+                <label class="field">
+                  <span id="label_precio_sector_m2">Precio Sector/m² (CLP/m²) <span class="help-icon" data-tooltip="Valor de referencia del mercado por metro cuadrado en la zona para propiedades similares.">?</span></span>
+                  <input type="number" id="precio_sector_m2" min="0" step="any" required>
+                </label>
+                <label class="field">
+                  <span>Factor Seguridad <span class="help-icon" data-tooltip="Factor conservador que se aplica al valor de mercado teórico (ej: 0.75 = 75%) para estimar un precio de venta más realista.">?</span></span>
+                  <input type="number" id="factor_seguridad" min="0" step="any" value="0.75" required>
+                  <p class="hint">Factor conservador para el valor de venta esperado (ej: 0.75).</p>
+                </label>
+              </div>
+            </div>
+
+            <div class="block__sub">
+                <p class="block__subtitle">Remodelación y gastos</p>
+                <div class="grid two">
+                  <label class="field">
+                  <span id="label_costo_remodelacion">Costo Remodelación (CLP) <span class="help-icon" data-tooltip="Costo estimado de la obra: materiales, mano de obra y otros trabajos necesarios para dejar la propiedad lista para la venta.">?</span></span>
+                  <input type="number" id="costo_remodelacion" min="0" step="any" required>
+                </label>
+                <label class="field">
+                  <span>Imprevistos (%) <span class="help-icon" data-tooltip="Porcentaje adicional sobre el costo de remodelación para cubrir sorpresas y sobrecostos.">?</span></span>
+                  <input type="number" id="imprevistos_pct" min="0" step="any" value="10" required>
+                </label>
+                <label class="field">
+                  <span>Gastos Compra (%) <span class="help-icon" data-tooltip="Porcentaje sobre el precio de compra que representa gastos como estudios, gestiones y otros costos asociados a la compra.">?</span></span>
+                  <input type="number" id="gastos_compra_pct" min="0" step="any" value="3" required>
+                </label>
+                <label class="field">
+                  <span>Comisión Corredor (%) <span class="help-icon" data-tooltip="Porcentaje de comisión que pagarás al corredor sobre el valor de venta final de la propiedad.">?</span></span>
+                  <input type="number" id="comision_corredor_pct" min="0" step="any" value="2" required>
+                </label>
+                <label class="field">
+                  <span id="label_notaria_conservador">Notaría y Conservador (CLP) <span class="help-icon" data-tooltip="Costos fijos de escrituración, inscripción y otros gastos legales para formalizar la compra.">?</span></span>
+                  <input type="number" id="notaria_conservador" min="0" step="any" required>
+                </label>
+              </div>
+            </div>
+
+            <div class="block__sub">
+                <p class="block__subtitle">Financiamiento y tiempos</p>
+                <div class="grid two">
+                  <label class="field">
+                  <span>% Pie (Inicial) <span class="help-icon" data-tooltip="Porcentaje del precio de compra que aportas con capital propio (el resto se financia con crédito).">?</span></span>
+                  <input type="number" id="pie_pct" min="0" step="any" value="20" required>
+                </label>
+                <label class="field">
+                  <span>Tasa Anual (%) <span class="help-icon" data-tooltip="Tasa de interés anual del crédito hipotecario que se usará para financiar la propiedad.">?</span></span>
+                  <input type="number" id="tasa_anual_pct" min="0" step="any" value="5" required>
+                </label>
+                <label class="field">
+                  <span>Plazo Crédito (Meses) <span class="help-icon" data-tooltip="Cantidad total de meses del crédito hipotecario (por ejemplo, 360 meses ≈ 30 años).">?</span></span>
+                  <input type="number" id="plazo_credito_meses" min="1" step="1" value="360" required>
+                </label>
+                <label class="field">
+                  <span>Duración Proyecto (Meses) <span class="help-icon" data-tooltip="Duración estimada del flipping desde la compra hasta la venta (incluyendo remodelación y escrituración).">?</span></span>
+                  <input type="number" id="duracion_proyecto_meses" min="1" step="1" value="12" required>
+                </label>
+                <label class="field">
+                  <span>Meses Pagando Dividendo <span class="help-icon" data-tooltip="Número de meses del crédito que realmente pagarás durante el proyecto de flipping.">?</span></span>
+                  <input type="number" id="meses_pagando_div" min="0" step="1" value="9" required>
+                </label>
+                <label class="field">
+                  <span>Margen mínimo objetivo sobre ARV (%) <span class="help-icon" data-tooltip="Porcentaje mínimo de ganancia que quieres obtener sobre el valor de venta esperado (ARV).">?</span></span>
+                  <input type="number" id="margen_objetivo_pct" min="0" step="any" value="15" placeholder="15">
+                </label>
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </section>
+
+      <section class="results-stack">
+        <div class="card results" id="seccion_resultados">
+          <div class="summary-card" id="status_card">
+              <div class="summary-main">
+              <div class="chip" id="status_chip">Estado <span class="help-icon" data-tooltip="Semáforo de la operación: Verde = muy buena; Amarillo = requiere revisar supuestos y riesgos; Rojo = rentabilidad o margen de seguridad insuficientes.">?</span></div>
+              <p class="summary-label">Ganancia bruta <span class="help-icon" data-tooltip="Diferencia entre el valor de venta esperado (ARV) y el costo total del proyecto, antes de impuestos.">?</span></p>
+              <p class="summary-value" id="resultado_ganancia">—</p>
+              <p class="summary-sub" id="status_msg">Completa el formulario para ver el estado.</p>
+              <div class="summary-inline">
+                <div class="mini-card">
+                  <p class="mini-label">Valor de venta esperado (ARV) <span class="help-icon" data-tooltip="ARV (After Repair Value): valor de venta esperado de la propiedad una vez remodelada, aplicando el factor de seguridad.">?</span></p>
+                  <p class="mini-value" id="resultado_arv">—</p>
+                </div>
+                <div class="mini-card" id="card-mao">
+                  <p class="mini-label">MAO (Oferta máxima) <span class="help-icon" data-tooltip="Maximum Allowable Offer: precio máximo que deberías pagar por la propiedad para lograr el margen de ganancia objetivo que definiste.">?</span></p>
+                  <p class="mini-value" id="mao_valor">—</p>
+                </div>
+              </div>
+            </div>
+            <div class="summary-side">
+              <div class="mini-card">
+                <p class="mini-label">ROI anualizado <span class="help-icon" data-tooltip="Rentabilidad sobre tu capital propio (pie), ajustada a un periodo de 12 meses para poder comparar entre proyectos.">?</span></p>
+                <p class="mini-value" id="resultado_roi_anual">—</p>
+              </div>
+              <div class="mini-card">
+                <p class="mini-label">Margen del proyecto <span class="help-icon" data-tooltip="Porcentaje de ganancia bruta sobre el costo total del proyecto. Indica qué tan 'gordito' es el margen del negocio.">?</span></p>
+                <p class="mini-value" id="resultado_margen">—</p>
+              </div>
+              <div class="mini-card">
+                <p class="mini-label">Factor de seguridad <span class="help-icon" data-tooltip="Porcentaje del valor de venta que queda como colchón entre el ARV y el costo total. Mientras más alto, más protegido estás ante errores o bajas de precio.">?</span></p>
+                <p class="mini-value" id="resultado_seguridad">—</p>
+              </div>
+              <div class="mini-card">
+                <p class="mini-label">Costo total del proyecto <span class="help-icon" data-tooltip="Suma de todos los costos del negocio: compra, gastos, remodelación, financiamiento y venta.">?</span></p>
+                <p class="mini-value" id="resultado_total">—</p>
+              </div>
+              <div class="mini-card">
+                <p class="mini-label">Dividendo mensual estimado</p>
+                <p class="mini-value" id="resultado_dividendo">—</p>
+              </div>
+              <div class="mini-card" id="card-diferencia-mao">
+                <p class="mini-label">Diferencia vs precio compra <span class="help-icon" data-tooltip="Comparación entre el MAO y el precio de compra actual. Positivo = estás por debajo del MAO (hay margen). Negativo = estás por encima (el precio está alto para tu objetivo).">?</span></p>
+                <p class="mini-value" id="mao_diferencia_valor">—</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid two results__grid">
+            <div class="metric">
+              <p class="metric__label">Costo de adquisición</p>
+              <p class="metric__value" id="resultado_adquisicion">—</p>
+            </div>
+            <div class="metric">
+              <p class="metric__label">Costo remodelación total</p>
+              <p class="metric__value" id="resultado_remodelacion">—</p>
+            </div>
+            <div class="metric">
+              <p class="metric__label">Costos de financiamiento</p>
+              <p class="metric__value" id="resultado_financiamiento">—</p>
+            </div>
+            <div class="metric">
+              <p class="metric__label">Costos de venta</p>
+              <p class="metric__value" id="resultado_venta">—</p>
+            </div>
+            <div class="metric">
+              <p class="metric__label">ROI sobre capital propio</p>
+              <p class="metric__value" id="resultado_roi">—</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
