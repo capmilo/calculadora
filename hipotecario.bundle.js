@@ -21878,7 +21878,11 @@ function useTheme() {
   });
   (0, import_react.useEffect)(() => {
     document.body.setAttribute("data-theme", theme);
+    document.body.classList.add("simulador-hipotecario");
     localStorage.setItem("hipotecario-theme", theme);
+    return () => {
+      document.body.classList.remove("simulador-hipotecario");
+    };
   }, [theme]);
   return [theme, setTheme];
 }
@@ -22090,13 +22094,33 @@ function TableSection({
 function getStoredHipotecarioInputs() {
   if (typeof window === "undefined") return defaultInputs;
   const raw = window.localStorage.getItem(HIPOTECARIO_FORM_STORAGE_KEY);
-  if (!raw) return defaultInputs;
-  try {
-    const parsed = JSON.parse(raw);
-    return { ...defaultInputs, ...parsed };
-  } catch {
-    return defaultInputs;
+  let stored = {};
+  if (raw) {
+    try {
+      stored = JSON.parse(raw);
+    } catch {
+    }
   }
+  const sharedRaw = window.localStorage.getItem("flipping-shared-data");
+  if (sharedRaw) {
+    try {
+      const shared = JSON.parse(sharedRaw);
+      if (shared.precioPropiedadUf && !stored.precioPropiedadUf) {
+        stored.precioPropiedadUf = shared.precioPropiedadUf;
+      }
+      if (shared.piePorcentaje !== void 0 && stored.piePorcentaje === void 0) {
+        stored.piePorcentaje = shared.piePorcentaje;
+      }
+      if (shared.tasaAnual !== void 0 && stored.tasaAnual === void 0) {
+        stored.tasaAnual = shared.tasaAnual;
+      }
+      if (shared.plazoAnios !== void 0 && stored.plazoAnios === void 0) {
+        stored.plazoAnios = shared.plazoAnios;
+      }
+    } catch {
+    }
+  }
+  return { ...defaultInputs, ...stored };
 }
 function App() {
   var _a;
@@ -22164,10 +22188,63 @@ function App() {
   (0, import_react.useEffect)(() => {
     handleCalculate();
   }, []);
+  const isFirstRender = (0, import_react.useRef)(true);
+  (0, import_react.useEffect)(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (inputs.precioPropiedadUf > 0) {
+      handleCalculate();
+    }
+  }, [inputs.precioPropiedadUf, inputs.piePorcentaje, inputs.pieUf, inputs.usarPieUf, inputs.tasaAnual, inputs.plazoAnios]);
   (0, import_react.useEffect)(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(HIPOTECARIO_FORM_STORAGE_KEY, JSON.stringify(inputs));
   }, [inputs]);
+  (0, import_react.useEffect)(() => {
+    if (typeof window === "undefined") return;
+    const applySharedData = (shared) => {
+      const updates = {};
+      if (shared.precioPropiedadUf && shared.precioPropiedadUf > 0) {
+        updates.precioPropiedadUf = shared.precioPropiedadUf;
+      }
+      if (shared.piePorcentaje !== void 0 && shared.piePorcentaje >= 0) {
+        updates.piePorcentaje = shared.piePorcentaje;
+        updates.usarPieUf = false;
+      }
+      if (shared.tasaAnual !== void 0 && shared.tasaAnual >= 0) {
+        updates.tasaAnual = shared.tasaAnual;
+      }
+      if (shared.plazoAnios !== void 0 && shared.plazoAnios > 0) {
+        updates.plazoAnios = shared.plazoAnios;
+      }
+      if (Object.keys(updates).length > 0) {
+        setInputs((prev) => ({ ...prev, ...updates }));
+        setTimeout(() => {
+          handleCalculate();
+        }, 100);
+      }
+    };
+    const handleStorageChange = (e) => {
+      if (e.key === "flipping-shared-data" && e.newValue) {
+        try {
+          const shared = JSON.parse(e.newValue);
+          applySharedData(shared);
+        } catch {
+        }
+      }
+    };
+    const handleCustomEvent = (e) => {
+      applySharedData(e.detail);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("flipping-data-synced", handleCustomEvent);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("flipping-data-synced", handleCustomEvent);
+    };
+  }, []);
   const exportCsv = () => {
     if (!amortization) return;
     const headers = ["cuota", "saldo_inicial", "interes", "amortizacion", "saldo_final", "seguros", "pago_total"];
@@ -22295,7 +22372,7 @@ function App() {
             type: "submit",
             form: "form_hipotecario",
             className: "btn topbar-btn",
-            children: "Calcular cr\xE9dito"
+            children: "Calcular"
           }
         )
       ] })

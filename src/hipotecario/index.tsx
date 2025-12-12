@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   AmortizationResult,
@@ -69,7 +69,11 @@ function useTheme(): [Theme, (next: Theme) => void] {
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
+    document.body.classList.add('simulador-hipotecario');
     localStorage.setItem('hipotecario-theme', theme);
+    return () => {
+      document.body.classList.remove('simulador-hipotecario');
+    };
   }, [theme]);
 
   return [theme, setTheme];
@@ -332,13 +336,44 @@ function TableSection({
 function getStoredHipotecarioInputs(): LoanInputs {
   if (typeof window === 'undefined') return defaultInputs;
   const raw = window.localStorage.getItem(HIPOTECARIO_FORM_STORAGE_KEY);
-  if (!raw) return defaultInputs;
-  try {
-    const parsed = JSON.parse(raw) as Partial<LoanInputs>;
-    return { ...defaultInputs, ...parsed };
-  } catch {
-    return defaultInputs;
+  let stored: Partial<LoanInputs> = {};
+  if (raw) {
+    try {
+      stored = JSON.parse(raw) as Partial<LoanInputs>;
+    } catch {
+      // Ignore parse errors
+    }
   }
+  
+  // Leer datos compartidos desde flipping
+  const sharedRaw = window.localStorage.getItem('flipping-shared-data');
+  if (sharedRaw) {
+    try {
+      const shared = JSON.parse(sharedRaw) as Partial<{
+        precioPropiedadUf: number;
+        piePorcentaje: number;
+        tasaAnual: number;
+        plazoAnios: number;
+      }>;
+      // Aplicar datos compartidos solo si no hay valores guardados específicamente en el simulador
+      if (shared.precioPropiedadUf && !stored.precioPropiedadUf) {
+        stored.precioPropiedadUf = shared.precioPropiedadUf;
+      }
+      if (shared.piePorcentaje !== undefined && stored.piePorcentaje === undefined) {
+        stored.piePorcentaje = shared.piePorcentaje;
+      }
+      if (shared.tasaAnual !== undefined && stored.tasaAnual === undefined) {
+        stored.tasaAnual = shared.tasaAnual;
+      }
+      if (shared.plazoAnios !== undefined && stored.plazoAnios === undefined) {
+        stored.plazoAnios = shared.plazoAnios;
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+  
+  return { ...defaultInputs, ...stored };
 }
 
 function App() {
@@ -412,10 +447,79 @@ function App() {
     handleCalculate();
   }, []);
 
+  // Recalcular automáticamente cuando cambien los inputs principales (pero no en el primer render)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (inputs.precioPropiedadUf > 0) {
+      handleCalculate();
+    }
+  }, [inputs.precioPropiedadUf, inputs.piePorcentaje, inputs.pieUf, inputs.usarPieUf, inputs.tasaAnual, inputs.plazoAnios]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(HIPOTECARIO_FORM_STORAGE_KEY, JSON.stringify(inputs));
   }, [inputs]);
+
+  // Escuchar cambios en datos compartidos desde flipping
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const applySharedData = (shared: Partial<{
+      precioPropiedadUf: number;
+      piePorcentaje: number;
+      tasaAnual: number;
+      plazoAnios: number;
+    }>) => {
+      const updates: Partial<LoanInputs> = {};
+      if (shared.precioPropiedadUf && shared.precioPropiedadUf > 0) {
+        updates.precioPropiedadUf = shared.precioPropiedadUf;
+      }
+      if (shared.piePorcentaje !== undefined && shared.piePorcentaje >= 0) {
+        updates.piePorcentaje = shared.piePorcentaje;
+        updates.usarPieUf = false; // Asegurar que use porcentaje
+      }
+      if (shared.tasaAnual !== undefined && shared.tasaAnual >= 0) {
+        updates.tasaAnual = shared.tasaAnual;
+      }
+      if (shared.plazoAnios !== undefined && shared.plazoAnios > 0) {
+        updates.plazoAnios = shared.plazoAnios;
+      }
+      if (Object.keys(updates).length > 0) {
+        setInputs((prev) => ({ ...prev, ...updates }));
+        // Calcular automáticamente después de actualizar
+        setTimeout(() => {
+          handleCalculate();
+        }, 100);
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'flipping-shared-data' && e.newValue) {
+        try {
+          const shared = JSON.parse(e.newValue);
+          applySharedData(shared);
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    };
+
+    const handleCustomEvent = (e: CustomEvent) => {
+      applySharedData(e.detail);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('flipping-data-synced', handleCustomEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('flipping-data-synced', handleCustomEvent as EventListener);
+    };
+  }, []);
 
   const exportCsv = () => {
     if (!amortization) return;
@@ -544,7 +648,7 @@ function App() {
             form="form_hipotecario"
             className="btn topbar-btn"
           >
-            Calcular crédito
+            Calcular
           </button>
         </div>
       </div>

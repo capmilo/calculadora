@@ -318,6 +318,74 @@ function agregarAHistorial(metrics, estado) {
   historialBody.appendChild(row);
 }
 
+function sincronizarDatosConSimulador() {
+  const valorUf = getUfValue();
+  if (valorUf <= 0) return;
+
+  const precioCompra = parseNumber('precio_compra');
+  const piePct = parseNumber('pie_pct');
+  const tasaAnualPct = parseNumber('tasa_anual_pct');
+  const plazoCreditoMeses = parseNumber('plazo_credito_meses');
+
+  if (isFinite(precioCompra) && precioCompra > 0) {
+    const unit = currentUnit();
+    const precioPropiedadUf = unit === 'uf' ? precioCompra : precioCompra / valorUf;
+    
+    const datosCompartidos = {
+      precioPropiedadUf: isFinite(precioPropiedadUf) && precioPropiedadUf > 0 ? precioPropiedadUf : null,
+      piePorcentaje: isFinite(piePct) && piePct >= 0 ? piePct : null,
+      tasaAnual: isFinite(tasaAnualPct) && tasaAnualPct >= 0 ? tasaAnualPct : null,
+      plazoAnios: isFinite(plazoCreditoMeses) && plazoCreditoMeses > 0 ? plazoCreditoMeses / 12 : null,
+    };
+
+    // Guardar solo los valores válidos
+    const datosParaGuardar = {};
+    Object.keys(datosCompartidos).forEach(key => {
+      if (datosCompartidos[key] !== null) {
+        datosParaGuardar[key] = datosCompartidos[key];
+      }
+    });
+
+    if (Object.keys(datosParaGuardar).length > 0) {
+      localStorage.setItem('flipping-shared-data', JSON.stringify(datosParaGuardar));
+    }
+  }
+}
+
+function sincronizarDatosConSimulador() {
+  const valorUf = getUfValue();
+  if (valorUf <= 0) return;
+
+  const precioCompra = parseNumber('precio_compra');
+  const piePct = parseNumber('pie_pct');
+  const tasaAnualPct = parseNumber('tasa_anual_pct');
+  const plazoCreditoMeses = parseNumber('plazo_credito_meses');
+
+  if (isFinite(precioCompra) && precioCompra > 0) {
+    const unit = currentUnit();
+    const precioPropiedadUf = unit === 'uf' ? precioCompra : precioCompra / valorUf;
+    
+    const datosCompartidos = {
+      precioPropiedadUf: isFinite(precioPropiedadUf) && precioPropiedadUf > 0 ? precioPropiedadUf : null,
+      piePorcentaje: isFinite(piePct) && piePct >= 0 ? piePct : null,
+      tasaAnual: isFinite(tasaAnualPct) && tasaAnualPct >= 0 ? tasaAnualPct : null,
+      plazoAnios: isFinite(plazoCreditoMeses) && plazoCreditoMeses > 0 ? plazoCreditoMeses / 12 : null,
+    };
+
+    // Guardar solo los valores válidos
+    const datosParaGuardar = {};
+    Object.keys(datosCompartidos).forEach(key => {
+      if (datosCompartidos[key] !== null) {
+        datosParaGuardar[key] = datosCompartidos[key];
+      }
+    });
+
+    if (Object.keys(datosParaGuardar).length > 0) {
+      localStorage.setItem('flipping-shared-data', JSON.stringify(datosParaGuardar));
+    }
+  }
+}
+
 function leerYValidar() {
   const valorUf = getUfValue();
   if (valorUf <= 0) throw new Error('Ingresa un valor de UF mayor a 0.');
@@ -422,6 +490,7 @@ form.addEventListener('submit', (e) => {
   e.preventDefault();
   try {
     const inputs = leerYValidar();
+    sincronizarDatosConSimulador(true); // true = disparar evento para cálculo inmediato
     const metrics = calcularIndicadores(inputs);
     const estado = determinarSemaforo(metrics);
     renderResultados(metrics, estado);
@@ -433,6 +502,29 @@ form.addEventListener('submit', (e) => {
     statusMsg.textContent = err.message;
     scrollToResults();
   }
+});
+
+// Sincronizar datos cuando cambien los campos relevantes
+const camposSincronizables = ['precio_compra', 'pie_pct', 'tasa_anual_pct', 'plazo_credito_meses'];
+camposSincronizables.forEach(id => {
+  const campo = document.getElementById(id);
+  if (campo) {
+    campo.addEventListener('change', sincronizarDatosConSimulador);
+    campo.addEventListener('input', () => {
+      // Debounce para no guardar en cada tecla
+      clearTimeout(campo._syncTimeout);
+      campo._syncTimeout = setTimeout(sincronizarDatosConSimulador, 500);
+    });
+  }
+});
+
+// También sincronizar cuando cambie la unidad o el valor UF
+valorUfInput.addEventListener('change', sincronizarDatosConSimulador);
+unitRadios.forEach(radio => {
+  radio.addEventListener('change', () => {
+    updateLabels();
+    sincronizarDatosConSimulador();
+  });
 });
 
 unitRadios.forEach((r) => r.addEventListener('change', () => {

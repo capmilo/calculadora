@@ -25,6 +25,50 @@ body[data-theme="dark"] {
   --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
 }
 
+/* Estilos específicos para el simulador con verde menta */
+body.simulador-hipotecario {
+  --color-accent: #00d9a5;
+}
+body.simulador-hipotecario[data-theme="dark"] {
+  --color-accent: #00d9a5;
+}
+body.simulador-hipotecario .btn {
+  background: #00d9a5;
+  box-shadow: 0 12px 30px rgba(0, 217, 165, 0.35);
+}
+body.simulador-hipotecario .btn:hover {
+  background: #00c593;
+}
+body.simulador-hipotecario input[type="number"]:focus {
+  border-color: #00d9a5;
+  box-shadow: 0 0 0 3px rgba(0, 217, 165, 0.25);
+}
+body.simulador-hipotecario select:focus {
+  border-color: #00d9a5;
+  box-shadow: 0 0 0 3px rgba(0, 217, 165, 0.25);
+}
+body.simulador-hipotecario .tab-nav__link--active {
+  background: #00d9a5;
+  color: white;
+  box-shadow: 0 10px 25px rgba(0, 217, 165, 0.35);
+}
+body.simulador-hipotecario .view-toggle__button.active {
+  background: #00d9a5;
+}
+body.simulador-hipotecario .topbar-btn {
+  background: #00d9a5;
+  box-shadow: 0 12px 30px rgba(0, 217, 165, 0.35);
+}
+body.simulador-hipotecario .topbar-btn:hover {
+  background: #00c593;
+}
+body.simulador-hipotecario .eyebrow {
+  color: #00d9a5;
+}
+body.simulador-hipotecario .block__eyebrow {
+  color: #00d9a5;
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -180,7 +224,7 @@ body[data-theme="dark"] .help-icon { background: rgba(156, 163, 175, 0.15); }
 
 .tab-nav { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; padding: 8px 10px; background: var(--color-bg-chip); border: 1px solid var(--color-border); border-radius: 14px; box-shadow: var(--shadow); }
 .tab-nav__link { text-decoration: none; padding: 8px 12px; border-radius: 12px; font-weight: 500; color: var(--color-text-muted); border: 1px solid transparent; font-size: 12px; transition: background 0.2s, color 0.2s; white-space: nowrap; }
-.tab-nav__link--active { background: #ffffff; color: var(--color-accent); font-weight: 800; border-color: transparent; box-shadow: 0 10px 25px rgba(59,130,246,0.15); }
+.tab-nav__link--active { background: var(--color-accent); color: white; font-weight: 800; border-color: var(--color-accent); box-shadow: 0 10px 25px rgba(59,130,246,0.35); }
 
 .tab-nav-dropdown { display: none; position: relative; }
 .tab-nav-dropdown select { padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 13px; border: 1px solid var(--color-border); background: var(--color-bg-chip); color: var(--color-text); cursor: pointer; min-width: 200px; }
