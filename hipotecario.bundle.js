@@ -22155,6 +22155,20 @@ function App() {
     setInputs((prev) => ({ ...prev, [field]: e.target.value }));
     setError(null);
   };
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const resultsSection = document.getElementById("hipotecario-results");
+      if (resultsSection) {
+        const topbarHeight = 80;
+        const elementPosition = resultsSection.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - topbarHeight;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth"
+        });
+      }
+    }, 100);
+  };
   const handleCalculate = (evt) => {
     var _a2;
     evt == null ? void 0 : evt.preventDefault();
@@ -22179,10 +22193,12 @@ function App() {
       setSummary(summaryData);
       setAmortization(amort);
       setError(null);
+      scrollToResults();
     } catch (err) {
       setSummary(null);
       setAmortization(null);
       setError(err instanceof Error ? err.message : "Revisa los datos ingresados.");
+      scrollToResults();
     }
   };
   (0, import_react.useEffect)(() => {
@@ -22497,7 +22513,7 @@ function App() {
           ] }),
           error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "error-banner", children: error })
         ] }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "results-stack", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { id: "hipotecario-results", className: "results-stack", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
             SummaryCards,
             {

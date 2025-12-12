@@ -413,6 +413,21 @@ function App() {
     setError(null);
   };
 
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const resultsSection = document.getElementById('hipotecario-results');
+      if (resultsSection) {
+        const topbarHeight = 80; // Altura aproximada del topbar
+        const elementPosition = resultsSection.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - topbarHeight;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+  };
+
   const handleCalculate = (evt?: React.FormEvent) => {
     evt?.preventDefault();
     try {
@@ -436,10 +451,12 @@ function App() {
       setSummary(summaryData);
       setAmortization(amort);
       setError(null);
+      scrollToResults();
     } catch (err) {
       setSummary(null);
       setAmortization(null);
       setError(err instanceof Error ? err.message : 'Revisa los datos ingresados.');
+      scrollToResults();
     }
   };
 
@@ -787,7 +804,7 @@ function App() {
             </form>
           </section>
 
-          <section className="results-stack">
+          <section id="hipotecario-results" className="results-stack">
             <SummaryCards
               summary={summary}
               unit={resultUnit}
