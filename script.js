@@ -384,6 +384,14 @@ function toggleTheme() {
 
 themeToggle.addEventListener('click', toggleTheme);
 
+// Manejar dropdown de navegación en móviles
+const tabDropdown = document.getElementById('tab_dropdown');
+if (tabDropdown) {
+  tabDropdown.addEventListener('change', (e) => {
+    window.location.href = e.target.value;
+  });
+}
+
 updateLabels();
 setTheme(document.body.getAttribute('data-theme') || 'dark');
 

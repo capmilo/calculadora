@@ -9,6 +9,16 @@
 <body data-theme="dark">
   <div class="topbar">
     <div class="topbar__section">
+      <div class="tab-nav">
+        <a class="tab-nav__link tab-nav__link--active" href="index.html">Flipping inmobiliario</a>
+        <a class="tab-nav__link" href="hipotecario.html">Simulador crédito hipotecario</a>
+      </div>
+      <div class="tab-nav-dropdown">
+        <select id="tab_dropdown" aria-label="Seleccionar herramienta">
+          <option value="index.html" selected>Flipping inmobiliario</option>
+          <option value="hipotecario.html">Simulador crédito hipotecario</option>
+        </select>
+      </div>
       <span class="topbar__title">Valor UF (CLP) <span class="help-icon" data-tooltip="Valor de referencia de la UF en CLP para convertir entre pesos y UF.">?</span></span>
       <input type="number" id="valor_uf_input" value="39600" min="0" step="any">
     </div>

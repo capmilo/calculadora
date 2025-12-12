@@ -4,14 +4,24 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "build:hipotecario": "esbuild src/hipotecario/index.tsx --bundle --sourcemap --format=esm --target=es2019 --outfile=hipotecario.bundle.js --loader:.ts=ts --loader:.tsx=tsx --jsx=automatic",
+    "test": "vitest run",
+    "test:watch": "vitest watch"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "esbuild": "^0.27.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
 }
