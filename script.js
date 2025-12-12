@@ -11,6 +11,25 @@ const themeLabel = document.getElementById('theme_label');
 const maoValorEl = document.getElementById('mao_valor');
 const maoDiferenciaEl = document.getElementById('mao_diferencia_valor');
 
+const FLIPPING_STORAGE_KEY = 'flipping-form-state';
+const FLIPPING_FIELD_IDS = [
+  'precio_compra',
+  'metros',
+  'precio_sector_m2',
+  'factor_seguridad',
+  'costo_remodelacion',
+  'imprevistos_pct',
+  'gastos_compra_pct',
+  'comision_corredor_pct',
+  'notaria_conservador',
+  'pie_pct',
+  'tasa_anual_pct',
+  'plazo_credito_meses',
+  'duracion_proyecto_meses',
+  'meses_pagando_div',
+  'margen_objetivo_pct',
+];
+
 const labels = {
   precioCompra: document.getElementById('label_precio_compra'),
   precioSector: document.getElementById('label_precio_sector_m2'),
@@ -35,6 +54,14 @@ const outputs = {
 
 let historial = [];
 let lastUnit = currentUnit();
+
+function canUseStorage() {
+  try {
+    return typeof window !== 'undefined' && 'localStorage' in window && window.localStorage != null;
+  } catch {
+    return false;
+  }
+}
 
 function currentUnit() {
   const selected = document.querySelector('input[name="unidad"]:checked');
@@ -342,6 +369,55 @@ function leerYValidar() {
   return baseValues;
 }
 
+function persistFormState() {
+  if (!canUseStorage()) return;
+  const payload = {
+    unidad: currentUnit(),
+    valorUf: valorUfInput.value || '',
+    fields: {},
+  };
+  FLIPPING_FIELD_IDS.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      payload.fields[id] = el.value;
+    }
+  });
+  try {
+    window.localStorage.setItem(FLIPPING_STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.warn('No se pudo guardar el formulario:', err);
+  }
+}
+
+function restoreFormState() {
+  if (!canUseStorage()) return;
+  const raw = window.localStorage.getItem(FLIPPING_STORAGE_KEY);
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    if (data.valorUf) {
+      valorUfInput.value = data.valorUf;
+    }
+    if (data.unidad) {
+      const radio = document.querySelector(`input[name="unidad"][value="${data.unidad}"]`);
+      if (radio) {
+        radio.checked = true;
+      }
+    }
+    if (data.fields && typeof data.fields === 'object') {
+      Object.entries(data.fields).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el && typeof value !== 'undefined') {
+          el.value = value;
+        }
+      });
+    }
+    lastUnit = currentUnit();
+  } catch (err) {
+    console.warn('No se pudo restaurar el formulario:', err);
+  }
+}
+
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   try {
@@ -364,8 +440,13 @@ unitRadios.forEach((r) => r.addEventListener('change', () => {
   convertInputs(lastUnit, nextUnit);
   lastUnit = nextUnit;
   updateLabels();
+  persistFormState();
 }));
-valorUfInput.addEventListener('input', updateLabels);
+valorUfInput.addEventListener('input', () => {
+  updateLabels();
+  persistFormState();
+});
+form.addEventListener('input', persistFormState);
 
 function setTheme(theme) {
   const body = document.body;
@@ -392,8 +473,10 @@ if (tabDropdown) {
   });
 }
 
+restoreFormState();
 updateLabels();
 setTheme(document.body.getAttribute('data-theme') || 'dark');
+initMobileCtaVisibility();
 
 function scrollToResults() {
   if (window.innerWidth > 720) return;
@@ -403,4 +486,31 @@ function scrollToResults() {
   const offset = topbar ? topbar.offsetHeight + 10 : 0;
   const target = results.getBoundingClientRect().top + window.scrollY - offset;
   window.scrollTo({ top: target, behavior: 'smooth' });
+}
+
+function initMobileCtaVisibility() {
+  if (!window.matchMedia('(max-width: 720px)').matches) return;
+  const body = document.body;
+  let lastScroll = window.scrollY;
+  let ticking = false;
+
+  const update = () => {
+    const current = window.scrollY;
+    if (current > lastScroll + 10) {
+      body.classList.add('cta-hidden');
+    } else if (current < lastScroll - 10) {
+      body.classList.remove('cta-hidden');
+    }
+    lastScroll = current;
+    ticking = false;
+  };
+
+  const handleScroll = () => {
+    if (!ticking) {
+      window.requestAnimationFrame(update);
+      ticking = true;
+    }
+  };
+
+  window.addEventListener('scroll', handleScroll);
 }

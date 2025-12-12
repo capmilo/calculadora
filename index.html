@@ -19,13 +19,15 @@
           <option value="hipotecario.html">Simulador crédito hipotecario</option>
         </select>
       </div>
-      <span class="topbar__title">Valor UF (CLP) <span class="help-icon" data-tooltip="Valor de referencia de la UF en CLP para convertir entre pesos y UF.">?</span></span>
-      <input type="number" id="valor_uf_input" value="39600" min="0" step="any">
     </div>
     <div class="topbar__actions">
+      <label class="topbar__uf" for="valor_uf_input">
+        <span class="topbar__uf-label">Valor UF (CLP) <span class="help-icon" data-tooltip="Valor de referencia de la UF en CLP para convertir entre pesos y UF.">?</span></span>
+        <input type="number" id="valor_uf_input" value="39600" min="0" step="any">
+      </label>
       <button type="button" id="theme_toggle" class="theme-toggle dark" aria-label="Cambiar tema">
         <span class="theme-toggle__icon" id="theme_icon" aria-hidden="true">◐</span>
-        <span class="theme-toggle__text"><span class="theme-current" id="theme_label">Dark</span> / Light</span>
+        <span id="theme_label" class="sr-only">Dark</span>
       </button>
       <button type="submit" id="btn_calcular" class="btn topbar-btn" form="form_calculo">Calcular rentabilidad</button>
     </div>

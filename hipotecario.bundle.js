@@ -21841,11 +21841,35 @@ var defaultInputs = {
   seguroIncendioSismoRateMensual: 6e-4,
   baseSeguro: "saldo"
 };
+var HIPOTECARIO_FORM_STORAGE_KEY = "hipotecario-form-state";
 function formatUf(value, decimals = 2) {
   return Number.isFinite(value) ? `UF ${value.toFixed(decimals)}` : "\u2014";
 }
-function formatNumber(value, decimals = 2) {
-  return Number.isFinite(value) ? value.toFixed(decimals) : "\u2014";
+function formatClp(value, valorUf, decimals = 0) {
+  if (!Number.isFinite(value) || !Number.isFinite(valorUf) || valorUf <= 0) return "\u2014";
+  const clp = value * valorUf;
+  return clp.toLocaleString("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: decimals,
+    minimumFractionDigits: decimals
+  });
+}
+function formatTableValue(value, unit, valorUf) {
+  if (!Number.isFinite(value)) return "\u2014";
+  if (unit === "uf") {
+    return value.toFixed(2);
+  }
+  if (!Number.isFinite(valorUf) || valorUf <= 0) return "\u2014";
+  const clp = value * valorUf;
+  return clp.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+}
+function formatUnitValue(value, unit, valorUf, decimals = 2) {
+  if (!Number.isFinite(value)) return "\u2014";
+  if (unit === "uf") {
+    return `UF ${value.toFixed(decimals)}`;
+  }
+  return formatClp(value, valorUf, 0);
 }
 function useTheme() {
   const [theme, setTheme] = (0, import_react.useState)(() => {
@@ -21858,29 +21882,70 @@ function useTheme() {
   }, [theme]);
   return [theme, setTheme];
 }
-function SummaryCards({ summary }) {
+function SummaryCards({
+  summary,
+  unit,
+  valorUf,
+  onUnitChange,
+  canShowClp
+}) {
+  const unitToggle = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "result-unit-toggle summary-card__toggle", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Ver resultados en:" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "result-unit-toggle__buttons", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "button",
+        {
+          type: "button",
+          className: `result-unit-toggle__button ${unit === "uf" ? "active" : ""}`,
+          onClick: () => onUnitChange("uf"),
+          children: "UF"
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "button",
+        {
+          type: "button",
+          className: `result-unit-toggle__button ${unit === "clp" ? "active" : ""}`,
+          onClick: () => canShowClp && onUnitChange("clp"),
+          disabled: !canShowClp,
+          children: "CLP"
+        }
+      )
+    ] }),
+    !canShowClp && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "result-unit-toggle__hint", children: "Ingresa un valor UF v\xE1lido para ver CLP" })
+  ] });
   if (!summary) {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "summary-card", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "summary-main", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-label", children: "Simulador de cr\xE9dito" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-value", children: "Ingresa datos y calcula para ver el detalle." })
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "summary-card", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "summary-card__top", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "summary-main", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-label", children: "Simulador de cr\xE9dito" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-value", children: "Ingresa datos y calcula para ver el detalle." })
+      ] }),
+      unitToggle
     ] }) });
   }
+  const formatter = unit === "uf" ? (value) => formatUf(value) : (value) => formatClp(value, valorUf);
   const metrics = [
-    { label: "Monto cr\xE9dito", value: formatUf(summary.monto_credito_uf) },
-    { label: "Dividendo base", value: formatUf(summary.dividendo_base_uf) },
-    { label: "Dividendo con seguros", value: formatUf(summary.dividendo_total_uf) },
-    { label: "Inter\xE9s total", value: formatUf(summary.interes_total_uf) },
-    { label: "Seguros total", value: formatUf(summary.seguros_total_uf) },
-    { label: "Costo total pagado", value: formatUf(summary.costo_total_pagado_uf) }
+    { label: "Monto cr\xE9dito", value: formatter(summary.monto_credito_uf) },
+    { label: "Dividendo base", value: formatter(summary.dividendo_base_uf) },
+    { label: "Dividendo con seguros", value: formatter(summary.dividendo_total_uf) },
+    { label: "Inter\xE9s total", value: formatter(summary.interes_total_uf) },
+    { label: "Seguros total", value: formatter(summary.seguros_total_uf) },
+    { label: "Costo total pagado", value: formatter(summary.costo_total_pagado_uf) }
   ];
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "summary-card", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "summary-main", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-label", children: "Resumen" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { className: "summary-value", children: [
-        formatUf(summary.dividendo_total_uf),
-        " / mes"
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "summary-card__top", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "summary-main", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-label", children: "Resumen" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { className: "summary-value", children: [
+          formatter(summary.dividendo_total_uf),
+          " / mes"
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { className: "summary-sub", children: [
+          "Cuota inicial con seguros incluidos \xB7 Valores en ",
+          unit === "uf" ? "UF" : "CLP"
+        ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-sub", children: "Cuota inicial con seguros incluidos" })
+      unitToggle
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "summary-side", children: metrics.map((metric) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "mini-card", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "mini-label", children: metric.label }),
@@ -21888,18 +21953,95 @@ function SummaryCards({ summary }) {
     ] }, metric.label)) })
   ] });
 }
+function AmortizationChart({
+  amortization,
+  unit,
+  valorUf
+}) {
+  const rows = amortization.rows;
+  const denominator = rows.length > 1 ? rows.length - 1 : 1;
+  const maxSaldo = Math.max(...rows.map((row) => row.saldo_inicial));
+  const minSaldo = Math.min(...rows.map((row) => row.saldo_final));
+  const range = Math.max(maxSaldo - minSaldo, 1);
+  const pathPoints = rows.map((row, idx) => {
+    const x = idx / denominator * 100;
+    const y = 95 - (row.saldo_inicial - minSaldo) / range * 80;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(" ");
+  const saldoInicio = rows.length ? formatUnitValue(rows[0].saldo_inicial, unit, valorUf, 2) : "\u2014";
+  const saldoFinal = rows.length ? formatUnitValue(rows[rows.length - 1].saldo_final, unit, valorUf, 2) : "\u2014";
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "amort-chart", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { viewBox: "0 0 100 100", preserveAspectRatio: "none", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("defs", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("linearGradient", { id: "saldoGradient", x1: "0", y1: "0", x2: "0", y2: "1", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("stop", { offset: "0%", stopColor: "var(--color-accent)", stopOpacity: "0.4" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("stop", { offset: "100%", stopColor: "var(--color-accent)", stopOpacity: "0.05" })
+      ] }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "polyline",
+        {
+          className: "amort-chart__line",
+          points: pathPoints,
+          fill: "none",
+          stroke: "var(--color-accent)",
+          strokeWidth: "2"
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "polygon",
+        {
+          className: "amort-chart__area",
+          points: `${pathPoints} 100,100 0,100`,
+          fill: "url(#saldoGradient)",
+          stroke: "none"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "amort-chart__footer", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Saldo inicial" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: saldoInicio })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Saldo final" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: saldoFinal })
+      ] })
+    ] })
+  ] });
+}
 function TableSection({
   amortization,
   onExport,
-  plazoMeses
+  plazoMeses,
+  unit,
+  valorUf,
+  viewMode,
+  onViewModeChange
 }) {
-  if (!amortization) {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "card table-card", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-label", children: "Tabla de amortizaci\xF3n" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-sub", children: "Sin datos a\xFAn. Completa el formulario y calcula." })
-    ] });
-  }
-  const { rows, totals } = amortization;
+  var _a;
+  const hasData = Boolean(amortization && amortization.rows.length);
+  const rows = (_a = amortization == null ? void 0 : amortization.rows) != null ? _a : [];
+  const totals = amortization == null ? void 0 : amortization.totals;
+  const viewToggle = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "view-toggle", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      "button",
+      {
+        type: "button",
+        className: `view-toggle__button ${viewMode === "tabla" ? "active" : ""}`,
+        onClick: () => onViewModeChange("tabla"),
+        children: "Tabla"
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      "button",
+      {
+        type: "button",
+        className: `view-toggle__button ${viewMode === "grafico" ? "active" : ""}`,
+        onClick: () => hasData && onViewModeChange("grafico"),
+        disabled: !hasData,
+        children: "Gr\xE1fico"
+      }
+    )
+  ] });
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "card table-card", children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "table-head", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
@@ -21909,9 +22051,12 @@ function TableSection({
           " cuotas \xB7 sistema franc\xE9s"
         ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "table-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "ghost-btn", onClick: onExport, children: "Exportar CSV" }) })
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "table-actions", children: [
+        viewToggle,
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "ghost-btn", onClick: onExport, disabled: !hasData, children: "Exportar CSV" })
+      ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "table-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", { className: "amort-table", children: [
+    !hasData || !amortization ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "summary-sub", children: "Sin datos a\xFAn. Completa el formulario y calcula." }) : viewMode === "tabla" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "table-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", { className: "amort-table", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: "#" }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: "Saldo inicial" }),
@@ -21923,33 +22068,60 @@ function TableSection({
       ] }) }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: rows.map((row) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: row.cuota }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatNumber(row.saldo_inicial) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatNumber(row.interes) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatNumber(row.amortizacion) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatNumber(row.saldo_final) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatNumber(row.seguros) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatNumber(row.pago_total) })
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatTableValue(row.saldo_inicial, unit, valorUf) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatTableValue(row.interes, unit, valorUf) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatTableValue(row.amortizacion, unit, valorUf) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatTableValue(row.saldo_final, unit, valorUf) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatTableValue(row.seguros, unit, valorUf) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", { children: formatTableValue(row.pago_total, unit, valorUf) })
       ] }, row.cuota)) }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tfoot", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: "Totales" }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: "-" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: formatNumber(totals.interes_total_uf) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: formatNumber(totals.capital_total_uf) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: formatTableValue(amortization.totals.interes_total_uf, unit, valorUf) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: formatTableValue(amortization.totals.capital_total_uf, unit, valorUf) }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: "-" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: formatNumber(totals.seguros_total_uf) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: formatNumber(totals.costo_total_pagado_uf) })
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: formatTableValue(amortization.totals.seguros_total_uf, unit, valorUf) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: formatTableValue(amortization.totals.costo_total_pagado_uf, unit, valorUf) })
       ] }) })
-    ] }) })
+    ] }) }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AmortizationChart, { amortization, unit, valorUf })
   ] });
+}
+function getStoredHipotecarioInputs() {
+  if (typeof window === "undefined") return defaultInputs;
+  const raw = window.localStorage.getItem(HIPOTECARIO_FORM_STORAGE_KEY);
+  if (!raw) return defaultInputs;
+  try {
+    const parsed = JSON.parse(raw);
+    return { ...defaultInputs, ...parsed };
+  } catch {
+    return defaultInputs;
+  }
 }
 function App() {
   var _a;
-  const [inputs, setInputs] = (0, import_react.useState)(defaultInputs);
+  const [inputs, setInputs] = (0, import_react.useState)(() => getStoredHipotecarioInputs());
   const [summary, setSummary] = (0, import_react.useState)(null);
   const [amortization, setAmortization] = (0, import_react.useState)(null);
   const [error, setError] = (0, import_react.useState)(null);
   const [theme, setTheme] = useTheme();
+  const [valorUf, setValorUf] = (0, import_react.useState)(() => {
+    const stored = localStorage.getItem("valor-uf");
+    return stored ? parseFloat(stored) : 39600;
+  });
+  const [resultUnit, setResultUnit] = (0, import_react.useState)("uf");
+  const [amortViewMode, setAmortViewMode] = (0, import_react.useState)("tabla");
   const plazoMeses = (0, import_react.useMemo)(() => Math.round(inputs.plazoAnios * 12), [inputs.plazoAnios]);
+  const pieUfEquivalente = (0, import_react.useMemo)(
+    () => inputs.precioPropiedadUf * (inputs.piePorcentaje / 100),
+    [inputs.precioPropiedadUf, inputs.piePorcentaje]
+  );
+  const canShowClp = Number.isFinite(valorUf) && valorUf > 0;
+  (0, import_react.useEffect)(() => {
+    if (resultUnit === "clp" && !canShowClp) {
+      setResultUnit("uf");
+    }
+  }, [resultUnit, canShowClp]);
   const handleNumberChange = (field) => (e) => {
     const next = parseFloat(e.target.value);
     setInputs((prev) => ({ ...prev, [field]: Number.isNaN(next) ? 0 : next }));
@@ -21992,6 +22164,10 @@ function App() {
   (0, import_react.useEffect)(() => {
     handleCalculate();
   }, []);
+  (0, import_react.useEffect)(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(HIPOTECARIO_FORM_STORAGE_KEY, JSON.stringify(inputs));
+  }, [inputs]);
   const exportCsv = () => {
     if (!amortization) return;
     const headers = ["cuota", "saldo_inicial", "interes", "amortizacion", "saldo_final", "seguros", "pago_total"];
@@ -22013,13 +22189,46 @@ function App() {
     link.click();
     URL.revokeObjectURL(url);
   };
-  const [valorUf, setValorUf] = (0, import_react.useState)(() => {
-    const stored = localStorage.getItem("valor-uf");
-    return stored ? parseFloat(stored) : 39600;
-  });
   (0, import_react.useEffect)(() => {
     localStorage.setItem("valor-uf", valorUf.toString());
   }, [valorUf]);
+  (0, import_react.useEffect)(() => {
+    if (!amortization && amortViewMode !== "tabla") {
+      setAmortViewMode("tabla");
+    }
+  }, [amortization, amortViewMode]);
+  (0, import_react.useEffect)(() => {
+    if (typeof window === "undefined") return void 0;
+    const mq = window.matchMedia("(max-width: 720px)");
+    if (!mq.matches) {
+      document.body.classList.remove("cta-hidden");
+      return void 0;
+    }
+    const body = document.body;
+    let lastScroll = window.scrollY;
+    let ticking = false;
+    const update = () => {
+      const current = window.scrollY;
+      if (current > lastScroll + 10) {
+        body.classList.add("cta-hidden");
+      } else if (current < lastScroll - 10) {
+        body.classList.remove("cta-hidden");
+      }
+      lastScroll = current;
+      ticking = false;
+    };
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(update);
+        ticking = true;
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      body.classList.remove("cta-hidden");
+    };
+  }, []);
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "topbar", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "topbar__section", children: [
@@ -22041,55 +22250,64 @@ function App() {
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "hipotecario.html", children: "Simulador cr\xE9dito hipotecario" })
             ]
           }
-        ) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "topbar__title", children: [
-          "Valor UF (CLP) ",
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "help-icon", "data-tooltip": "Valor de referencia de la UF en CLP para convertir entre pesos y UF.", children: "?" })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-          "input",
-          {
-            type: "number",
-            id: "valor_uf_input",
-            value: valorUf,
-            min: "0",
-            step: "any",
-            onChange: (e) => {
-              const val = parseFloat(e.target.value);
-              if (!isNaN(val) && val > 0) {
-                setValorUf(val);
+        ) })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "topbar__actions", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "topbar__uf", htmlFor: "valor_uf_input", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "topbar__uf-label", children: [
+            "Valor UF (CLP) ",
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "help-icon", "data-tooltip": "Valor de referencia de la UF en CLP para convertir entre pesos y UF.", children: "?" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+            "input",
+            {
+              type: "number",
+              id: "valor_uf_input",
+              value: valorUf,
+              min: "0",
+              step: "any",
+              onChange: (e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val) && val > 0) {
+                  setValorUf(val);
+                }
               }
             }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+          "button",
+          {
+            type: "button",
+            id: "theme_toggle",
+            className: `theme-toggle ${theme === "dark" ? "dark" : ""}`,
+            "aria-label": "Cambiar tema",
+            onClick: () => setTheme(theme === "dark" ? "light" : "dark"),
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "theme-toggle__icon", "aria-hidden": true, children: theme === "dark" ? "\u25D0" : "\u25D1" }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { id: "theme_label", className: "sr-only", children: theme === "dark" ? "Dark" : "Light" })
+            ]
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "button",
+          {
+            type: "submit",
+            form: "form_hipotecario",
+            className: "btn topbar-btn",
+            children: "Calcular cr\xE9dito"
           }
         )
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "topbar__actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
-        "button",
-        {
-          type: "button",
-          id: "theme_toggle",
-          className: `theme-toggle ${theme === "dark" ? "dark" : ""}`,
-          "aria-label": "Cambiar tema",
-          onClick: () => setTheme(theme === "dark" ? "light" : "dark"),
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "theme-toggle__icon", "aria-hidden": true, children: theme === "dark" ? "\u25D0" : "\u25D1" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "theme-toggle__text", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "theme-current", children: theme === "dark" ? "Dark" : "Light" }),
-              " / ",
-              theme === "dark" ? "Light" : "Dark"
-            ] })
-          ]
-        }
-      ) })
+      ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "page", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "page page--hipotecario", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("header", { className: "hero", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "eyebrow", children: "Financiamiento en UF" }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", { children: "Simulador de Cr\xE9dito Hipotecario" }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "subhead", children: "Sistema de amortizaci\xF3n franc\xE9s (cuota fija). Calcula dividendo, seguros y tabla completa de pagos en UF." })
       ] }) }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", { className: "layout main-grid", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", { className: "card form-card", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", { className: "form", onSubmit: handleCalculate, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", { className: "card form-card", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", { id: "form_hipotecario", className: "form", onSubmit: handleCalculate, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "block", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "block__header", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "block__eyebrow", children: "A) Datos base" }),
@@ -22128,7 +22346,12 @@ function App() {
               ] }),
               !inputs.usarPieUf && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "field", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Pie (%)" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "number", min: "0", step: "any", value: inputs.piePorcentaje, onChange: handleNumberChange("piePorcentaje") })
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "number", min: "0", step: "any", value: inputs.piePorcentaje, onChange: handleNumberChange("piePorcentaje") }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { className: "hint", children: [
+                  "Equivale a ",
+                  formatUf(pieUfEquivalente),
+                  canShowClp ? ` (${formatClp(pieUfEquivalente, valorUf)})` : ""
+                ] })
               ] }),
               inputs.usarPieUf && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "field", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Pie (UF)" }),
@@ -22165,11 +22388,21 @@ function App() {
               inputs.seguroModo === "simple" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "field", children: [
                   /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Seguro desgravamen (UF mensual)" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "number", min: "0", step: "any", value: inputs.seguroDesgravamenUfMensual, onChange: handleNumberChange("seguroDesgravamenUfMensual") })
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "number", min: "0", step: "any", value: inputs.seguroDesgravamenUfMensual, onChange: handleNumberChange("seguroDesgravamenUfMensual") }),
+                  canShowClp && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { className: "hint", children: [
+                    "\u2248 ",
+                    formatClp(inputs.seguroDesgravamenUfMensual, valorUf),
+                    " / mes"
+                  ] })
                 ] }),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "field", children: [
                   /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Seguro incendio + sismo (UF mensual)" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "number", min: "0", step: "any", value: inputs.seguroIncendioSismoUfMensual, onChange: handleNumberChange("seguroIncendioSismoUfMensual") })
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "number", min: "0", step: "any", value: inputs.seguroIncendioSismoUfMensual, onChange: handleNumberChange("seguroIncendioSismoUfMensual") }),
+                  canShowClp && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { className: "hint", children: [
+                    "\u2248 ",
+                    formatClp(inputs.seguroIncendioSismoUfMensual, valorUf),
+                    " / mes"
+                  ] })
                 ] })
               ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "field", children: [
@@ -22185,12 +22418,31 @@ function App() {
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "submit", className: "btn", children: "Calcular cr\xE9dito" }),
           error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "error-banner", children: error })
         ] }) }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "results-stack", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SummaryCards, { summary }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableSection, { amortization, onExport: exportCsv, plazoMeses })
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+            SummaryCards,
+            {
+              summary,
+              unit: resultUnit,
+              valorUf,
+              onUnitChange: setResultUnit,
+              canShowClp
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+            TableSection,
+            {
+              amortization,
+              onExport: exportCsv,
+              plazoMeses,
+              unit: resultUnit,
+              valorUf,
+              viewMode: amortViewMode,
+              onViewModeChange: setAmortViewMode
+            }
+          )
         ] })
       ] })
     ] })

@@ -23,14 +23,42 @@ const defaultInputs: LoanInputs = {
   baseSeguro: 'saldo',
 };
 
+const HIPOTECARIO_FORM_STORAGE_KEY = 'hipotecario-form-state';
+
 type Theme = 'dark' | 'light';
+type ResultUnit = 'uf' | 'clp';
 
 function formatUf(value: number, decimals = 2): string {
   return Number.isFinite(value) ? `UF ${value.toFixed(decimals)}` : '—';
 }
 
-function formatNumber(value: number, decimals = 2): string {
-  return Number.isFinite(value) ? value.toFixed(decimals) : '—';
+function formatClp(value: number, valorUf: number, decimals = 0): string {
+  if (!Number.isFinite(value) || !Number.isFinite(valorUf) || valorUf <= 0) return '—';
+  const clp = value * valorUf;
+  return clp.toLocaleString('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    maximumFractionDigits: decimals,
+    minimumFractionDigits: decimals,
+  });
+}
+
+function formatTableValue(value: number, unit: ResultUnit, valorUf: number): string {
+  if (!Number.isFinite(value)) return '—';
+  if (unit === 'uf') {
+    return value.toFixed(2);
+  }
+  if (!Number.isFinite(valorUf) || valorUf <= 0) return '—';
+  const clp = value * valorUf;
+  return clp.toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+}
+
+function formatUnitValue(value: number, unit: ResultUnit, valorUf: number, decimals = 2): string {
+  if (!Number.isFinite(value)) return '—';
+  if (unit === 'uf') {
+    return `UF ${value.toFixed(decimals)}`;
+  }
+  return formatClp(value, valorUf, 0);
 }
 
 function useTheme(): [Theme, (next: Theme) => void] {
@@ -47,33 +75,81 @@ function useTheme(): [Theme, (next: Theme) => void] {
   return [theme, setTheme];
 }
 
-function SummaryCards({ summary }: { summary: LoanSummary | null }) {
+function SummaryCards({
+  summary,
+  unit,
+  valorUf,
+  onUnitChange,
+  canShowClp,
+}: {
+  summary: LoanSummary | null;
+  unit: ResultUnit;
+  valorUf: number;
+  onUnitChange: (next: ResultUnit) => void;
+  canShowClp: boolean;
+}) {
+  const unitToggle = (
+    <div className="result-unit-toggle summary-card__toggle">
+      <span>Ver resultados en:</span>
+      <div className="result-unit-toggle__buttons">
+        <button
+          type="button"
+          className={`result-unit-toggle__button ${unit === 'uf' ? 'active' : ''}`}
+          onClick={() => onUnitChange('uf')}
+        >
+          UF
+        </button>
+        <button
+          type="button"
+          className={`result-unit-toggle__button ${unit === 'clp' ? 'active' : ''}`}
+          onClick={() => canShowClp && onUnitChange('clp')}
+          disabled={!canShowClp}
+        >
+          CLP
+        </button>
+      </div>
+      {!canShowClp && <span className="result-unit-toggle__hint">Ingresa un valor UF válido para ver CLP</span>}
+    </div>
+  );
+
   if (!summary) {
     return (
       <div className="summary-card">
-        <div className="summary-main">
-          <p className="summary-label">Simulador de crédito</p>
-          <p className="summary-value">Ingresa datos y calcula para ver el detalle.</p>
+        <div className="summary-card__top">
+          <div className="summary-main">
+            <p className="summary-label">Simulador de crédito</p>
+            <p className="summary-value">Ingresa datos y calcula para ver el detalle.</p>
+          </div>
+          {unitToggle}
         </div>
       </div>
     );
   }
 
+  const formatter = unit === 'uf'
+    ? (value: number) => formatUf(value)
+    : (value: number) => formatClp(value, valorUf);
+
   const metrics = [
-    { label: 'Monto crédito', value: formatUf(summary.monto_credito_uf) },
-    { label: 'Dividendo base', value: formatUf(summary.dividendo_base_uf) },
-    { label: 'Dividendo con seguros', value: formatUf(summary.dividendo_total_uf) },
-    { label: 'Interés total', value: formatUf(summary.interes_total_uf) },
-    { label: 'Seguros total', value: formatUf(summary.seguros_total_uf) },
-    { label: 'Costo total pagado', value: formatUf(summary.costo_total_pagado_uf) },
+    { label: 'Monto crédito', value: formatter(summary.monto_credito_uf) },
+    { label: 'Dividendo base', value: formatter(summary.dividendo_base_uf) },
+    { label: 'Dividendo con seguros', value: formatter(summary.dividendo_total_uf) },
+    { label: 'Interés total', value: formatter(summary.interes_total_uf) },
+    { label: 'Seguros total', value: formatter(summary.seguros_total_uf) },
+    { label: 'Costo total pagado', value: formatter(summary.costo_total_pagado_uf) },
   ];
 
   return (
     <div className="summary-card">
-      <div className="summary-main">
-        <p className="summary-label">Resumen</p>
-        <p className="summary-value">{formatUf(summary.dividendo_total_uf)} / mes</p>
-        <p className="summary-sub">Cuota inicial con seguros incluidos</p>
+      <div className="summary-card__top">
+        <div className="summary-main">
+          <p className="summary-label">Resumen</p>
+          <p className="summary-value">{formatter(summary.dividendo_total_uf)} / mes</p>
+          <p className="summary-sub">
+            Cuota inicial con seguros incluidos · Valores en {unit === 'uf' ? 'UF' : 'CLP'}
+          </p>
+        </div>
+        {unitToggle}
       </div>
       <div className="summary-side">
         {metrics.map((metric) => (
@@ -87,25 +163,108 @@ function SummaryCards({ summary }: { summary: LoanSummary | null }) {
   );
 }
 
+function AmortizationChart({
+  amortization,
+  unit,
+  valorUf,
+}: {
+  amortization: AmortizationResult;
+  unit: ResultUnit;
+  valorUf: number;
+}) {
+  const rows = amortization.rows;
+  const denominator = rows.length > 1 ? rows.length - 1 : 1;
+  const maxSaldo = Math.max(...rows.map((row) => row.saldo_inicial));
+  const minSaldo = Math.min(...rows.map((row) => row.saldo_final));
+  const range = Math.max(maxSaldo - minSaldo, 1);
+  const pathPoints = rows.map((row, idx) => {
+    const x = (idx / denominator) * 100;
+    const y = 95 - ((row.saldo_inicial - minSaldo) / range) * 80;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(' ');
+
+  const saldoInicio = rows.length ? formatUnitValue(rows[0].saldo_inicial, unit, valorUf, 2) : '—';
+  const saldoFinal = rows.length
+    ? formatUnitValue(rows[rows.length - 1].saldo_final, unit, valorUf, 2)
+    : '—';
+
+  return (
+    <div className="amort-chart">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="saldoGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0.05" />
+          </linearGradient>
+        </defs>
+        <polyline
+          className="amort-chart__line"
+          points={pathPoints}
+          fill="none"
+          stroke="var(--color-accent)"
+          strokeWidth="2"
+        />
+        <polygon
+          className="amort-chart__area"
+          points={`${pathPoints} 100,100 0,100`}
+          fill="url(#saldoGradient)"
+          stroke="none"
+        />
+      </svg>
+      <div className="amort-chart__footer">
+        <div>
+          <p>Saldo inicial</p>
+          <strong>{saldoInicio}</strong>
+        </div>
+        <div>
+          <p>Saldo final</p>
+          <strong>{saldoFinal}</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TableSection({
   amortization,
   onExport,
   plazoMeses,
+  unit,
+  valorUf,
+  viewMode,
+  onViewModeChange,
 }: {
   amortization: AmortizationResult | null;
   onExport: () => void;
   plazoMeses: number;
+  unit: ResultUnit;
+  valorUf: number;
+  viewMode: 'tabla' | 'grafico';
+  onViewModeChange: (mode: 'tabla' | 'grafico') => void;
 }) {
-  if (!amortization) {
-    return (
-      <div className="card table-card">
-        <p className="summary-label">Tabla de amortización</p>
-        <p className="summary-sub">Sin datos aún. Completa el formulario y calcula.</p>
-      </div>
-    );
-  }
+  const hasData = Boolean(amortization && amortization.rows.length);
+  const rows = amortization?.rows ?? [];
+  const totals = amortization?.totals;
 
-  const { rows, totals } = amortization;
+  const viewToggle = (
+    <div className="view-toggle">
+      <button
+        type="button"
+        className={`view-toggle__button ${viewMode === 'tabla' ? 'active' : ''}`}
+        onClick={() => onViewModeChange('tabla')}
+      >
+        Tabla
+      </button>
+      <button
+        type="button"
+        className={`view-toggle__button ${viewMode === 'grafico' ? 'active' : ''}`}
+        onClick={() => hasData && onViewModeChange('grafico')}
+        disabled={!hasData}
+      >
+        Gráfico
+      </button>
+    </div>
+  );
 
   return (
     <div className="card table-card">
@@ -115,62 +274,98 @@ function TableSection({
           <p className="summary-sub">{plazoMeses} cuotas · sistema francés</p>
         </div>
         <div className="table-actions">
-          <button type="button" className="ghost-btn" onClick={onExport}>
+          {viewToggle}
+          <button type="button" className="ghost-btn" onClick={onExport} disabled={!hasData}>
             Exportar CSV
           </button>
         </div>
       </div>
-      <div className="table-wrapper">
-        <table className="amort-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Saldo inicial</th>
-              <th>Interés</th>
-              <th>Amortización</th>
-              <th>Saldo final</th>
-              <th>Seguros</th>
-              <th>Pago total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.cuota}>
-                <td>{row.cuota}</td>
-                <td>{formatNumber(row.saldo_inicial)}</td>
-                <td>{formatNumber(row.interes)}</td>
-                <td>{formatNumber(row.amortizacion)}</td>
-                <td>{formatNumber(row.saldo_final)}</td>
-                <td>{formatNumber(row.seguros)}</td>
-                <td>{formatNumber(row.pago_total)}</td>
+      {!hasData || !amortization ? (
+        <p className="summary-sub">Sin datos aún. Completa el formulario y calcula.</p>
+      ) : viewMode === 'tabla' ? (
+        <div className="table-wrapper">
+          <table className="amort-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Saldo inicial</th>
+                <th>Interés</th>
+                <th>Amortización</th>
+                <th>Saldo final</th>
+                <th>Seguros</th>
+                <th>Pago total</th>
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th>Totales</th>
-              <th>-</th>
-              <th>{formatNumber(totals.interes_total_uf)}</th>
-              <th>{formatNumber(totals.capital_total_uf)}</th>
-              <th>-</th>
-              <th>{formatNumber(totals.seguros_total_uf)}</th>
-              <th>{formatNumber(totals.costo_total_pagado_uf)}</th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.cuota}>
+                  <td>{row.cuota}</td>
+                  <td>{formatTableValue(row.saldo_inicial, unit, valorUf)}</td>
+                  <td>{formatTableValue(row.interes, unit, valorUf)}</td>
+                  <td>{formatTableValue(row.amortizacion, unit, valorUf)}</td>
+                  <td>{formatTableValue(row.saldo_final, unit, valorUf)}</td>
+                  <td>{formatTableValue(row.seguros, unit, valorUf)}</td>
+                  <td>{formatTableValue(row.pago_total, unit, valorUf)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>Totales</th>
+                <th>-</th>
+                <th>{formatTableValue(amortization!.totals.interes_total_uf, unit, valorUf)}</th>
+                <th>{formatTableValue(amortization!.totals.capital_total_uf, unit, valorUf)}</th>
+                <th>-</th>
+                <th>{formatTableValue(amortization!.totals.seguros_total_uf, unit, valorUf)}</th>
+                <th>{formatTableValue(amortization!.totals.costo_total_pagado_uf, unit, valorUf)}</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ) : (
+        <AmortizationChart amortization={amortization} unit={unit} valorUf={valorUf} />
+      )}
     </div>
   );
 }
 
+function getStoredHipotecarioInputs(): LoanInputs {
+  if (typeof window === 'undefined') return defaultInputs;
+  const raw = window.localStorage.getItem(HIPOTECARIO_FORM_STORAGE_KEY);
+  if (!raw) return defaultInputs;
+  try {
+    const parsed = JSON.parse(raw) as Partial<LoanInputs>;
+    return { ...defaultInputs, ...parsed };
+  } catch {
+    return defaultInputs;
+  }
+}
+
 function App() {
-  const [inputs, setInputs] = useState<LoanInputs>(defaultInputs);
+  const [inputs, setInputs] = useState<LoanInputs>(() => getStoredHipotecarioInputs());
   const [summary, setSummary] = useState<LoanSummary | null>(null);
   const [amortization, setAmortization] = useState<AmortizationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useTheme();
+  const [valorUf, setValorUf] = useState(() => {
+    const stored = localStorage.getItem('valor-uf');
+    return stored ? parseFloat(stored) : 39600;
+  });
+  const [resultUnit, setResultUnit] = useState<ResultUnit>('uf');
+  const [amortViewMode, setAmortViewMode] = useState<'tabla' | 'grafico'>('tabla');
 
   const plazoMeses = useMemo(() => Math.round(inputs.plazoAnios * 12), [inputs.plazoAnios]);
+  const pieUfEquivalente = useMemo(
+    () => inputs.precioPropiedadUf * (inputs.piePorcentaje / 100),
+    [inputs.precioPropiedadUf, inputs.piePorcentaje],
+  );
+  const canShowClp = Number.isFinite(valorUf) && valorUf > 0;
+
+  useEffect(() => {
+    if (resultUnit === 'clp' && !canShowClp) {
+      setResultUnit('uf');
+    }
+  }, [resultUnit, canShowClp]);
 
   const handleNumberChange = (field: keyof LoanInputs) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = parseFloat(e.target.value);
@@ -217,6 +412,11 @@ function App() {
     handleCalculate();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(HIPOTECARIO_FORM_STORAGE_KEY, JSON.stringify(inputs));
+  }, [inputs]);
+
   const exportCsv = () => {
     if (!amortization) return;
     const headers = ['cuota', 'saldo_inicial', 'interes', 'amortizacion', 'saldo_final', 'seguros', 'pago_total'];
@@ -241,14 +441,52 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const [valorUf, setValorUf] = useState(() => {
-    const stored = localStorage.getItem('valor-uf');
-    return stored ? parseFloat(stored) : 39600;
-  });
-
   useEffect(() => {
     localStorage.setItem('valor-uf', valorUf.toString());
   }, [valorUf]);
+
+  useEffect(() => {
+    if (!amortization && amortViewMode !== 'tabla') {
+      setAmortViewMode('tabla');
+    }
+  }, [amortization, amortViewMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const mq = window.matchMedia('(max-width: 720px)');
+    if (!mq.matches) {
+      document.body.classList.remove('cta-hidden');
+      return undefined;
+    }
+    const body = document.body;
+    let lastScroll = window.scrollY;
+    let ticking = false;
+
+    const update = () => {
+      const current = window.scrollY;
+      if (current > lastScroll + 10) {
+        body.classList.add('cta-hidden');
+      } else if (current < lastScroll - 10) {
+        body.classList.remove('cta-hidden');
+      }
+      lastScroll = current;
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(update);
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      body.classList.remove('cta-hidden');
+    };
+  }, []);
 
   return (
     <>
@@ -271,38 +509,47 @@ function App() {
               <option value="hipotecario.html">Simulador crédito hipotecario</option>
             </select>
           </div>
-          <span className="topbar__title">Valor UF (CLP) <span className="help-icon" data-tooltip="Valor de referencia de la UF en CLP para convertir entre pesos y UF.">?</span></span>
-          <input 
-            type="number" 
-            id="valor_uf_input" 
-            value={valorUf} 
-            min="0" 
-            step="any"
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              if (!isNaN(val) && val > 0) {
-                setValorUf(val);
-              }
-            }}
-          />
         </div>
         <div className="topbar__actions">
+          <label className="topbar__uf" htmlFor="valor_uf_input">
+            <span className="topbar__uf-label">
+              Valor UF (CLP) <span className="help-icon" data-tooltip="Valor de referencia de la UF en CLP para convertir entre pesos y UF.">?</span>
+            </span>
+            <input 
+              type="number" 
+              id="valor_uf_input" 
+              value={valorUf} 
+              min="0" 
+              step="any"
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val) && val > 0) {
+                  setValorUf(val);
+                }
+              }}
+            />
+          </label>
           <button
             type="button"
-          id="theme_toggle"
-          className={`theme-toggle ${theme === 'dark' ? 'dark' : ''}`}
-          aria-label="Cambiar tema"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        >
-          <span className="theme-toggle__icon" aria-hidden>{theme === 'dark' ? '◐' : '◑'}</span>
-          <span className="theme-toggle__text">
-            <span className="theme-current">{theme === 'dark' ? 'Dark' : 'Light'}</span> / {theme === 'dark' ? 'Light' : 'Dark'}
-          </span>
-        </button>
+            id="theme_toggle"
+            className={`theme-toggle ${theme === 'dark' ? 'dark' : ''}`}
+            aria-label="Cambiar tema"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            <span className="theme-toggle__icon" aria-hidden>{theme === 'dark' ? '◐' : '◑'}</span>
+            <span id="theme_label" className="sr-only">{theme === 'dark' ? 'Dark' : 'Light'}</span>
+          </button>
+          <button
+            type="submit"
+            form="form_hipotecario"
+            className="btn topbar-btn"
+          >
+            Calcular crédito
+          </button>
         </div>
       </div>
 
-      <div className="page">
+      <div className="page page--hipotecario">
         <header className="hero">
           <div>
             <p className="eyebrow">Financiamiento en UF</p>
@@ -315,7 +562,7 @@ function App() {
 
         <main className="layout main-grid">
           <section className="card form-card">
-            <form className="form" onSubmit={handleCalculate}>
+            <form id="form_hipotecario" className="form" onSubmit={handleCalculate}>
               <div className="block">
                 <div className="block__header">
                   <p className="block__eyebrow">A) Datos base</p>
@@ -352,6 +599,10 @@ function App() {
                     <label className="field">
                       <span>Pie (%)</span>
                       <input type="number" min="0" step="any" value={inputs.piePorcentaje} onChange={handleNumberChange('piePorcentaje')} />
+                      <p className="hint">
+                        Equivale a {formatUf(pieUfEquivalente)}
+                        {canShowClp ? ` (${formatClp(pieUfEquivalente, valorUf)})` : ''}
+                      </p>
                     </label>
                   )}
                   {inputs.usarPieUf && (
@@ -399,10 +650,16 @@ function App() {
                       <label className="field">
                         <span>Seguro desgravamen (UF mensual)</span>
                         <input type="number" min="0" step="any" value={inputs.seguroDesgravamenUfMensual} onChange={handleNumberChange('seguroDesgravamenUfMensual')} />
+                        {canShowClp && (
+                          <p className="hint">≈ {formatClp(inputs.seguroDesgravamenUfMensual, valorUf)} / mes</p>
+                        )}
                       </label>
                       <label className="field">
                         <span>Seguro incendio + sismo (UF mensual)</span>
                         <input type="number" min="0" step="any" value={inputs.seguroIncendioSismoUfMensual} onChange={handleNumberChange('seguroIncendioSismoUfMensual')} />
+                        {canShowClp && (
+                          <p className="hint">≈ {formatClp(inputs.seguroIncendioSismoUfMensual, valorUf)} / mes</p>
+                        )}
                       </label>
                     </>
                   ) : (
@@ -422,14 +679,27 @@ function App() {
                 </div>
               </div>
 
-              <button type="submit" className="btn">Calcular crédito</button>
               {error && <div className="error-banner">{error}</div>}
             </form>
           </section>
 
           <section className="results-stack">
-            <SummaryCards summary={summary} />
-            <TableSection amortization={amortization} onExport={exportCsv} plazoMeses={plazoMeses} />
+            <SummaryCards
+              summary={summary}
+              unit={resultUnit}
+              valorUf={valorUf}
+              onUnitChange={setResultUnit}
+              canShowClp={canShowClp}
+            />
+            <TableSection
+              amortization={amortization}
+              onExport={exportCsv}
+              plazoMeses={plazoMeses}
+              unit={resultUnit}
+              valorUf={valorUf}
+              viewMode={amortViewMode}
+              onViewModeChange={setAmortViewMode}
+            />
           </section>
         </main>
       </div>
