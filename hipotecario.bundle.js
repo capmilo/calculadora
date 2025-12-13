@@ -22146,6 +22146,9 @@ function App() {
       setResultUnit("uf");
     }
   }, [resultUnit, canShowClp]);
+  (0, import_react.useEffect)(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const handleNumberChange = (field) => (e) => {
     const next = parseFloat(e.target.value);
     setInputs((prev) => ({ ...prev, [field]: Number.isNaN(next) ? 0 : next }));
@@ -22169,7 +22172,7 @@ function App() {
       }
     }, 100);
   };
-  const handleCalculate = (evt) => {
+  const handleCalculate = (evt, shouldScroll = false) => {
     var _a2;
     evt == null ? void 0 : evt.preventDefault();
     try {
@@ -22193,27 +22196,18 @@ function App() {
       setSummary(summaryData);
       setAmortization(amort);
       setError(null);
-      scrollToResults();
+      if (shouldScroll) {
+        scrollToResults();
+      }
     } catch (err) {
       setSummary(null);
       setAmortization(null);
       setError(err instanceof Error ? err.message : "Revisa los datos ingresados.");
-      scrollToResults();
+      if (shouldScroll) {
+        scrollToResults();
+      }
     }
   };
-  (0, import_react.useEffect)(() => {
-    handleCalculate();
-  }, []);
-  const isFirstRender = (0, import_react.useRef)(true);
-  (0, import_react.useEffect)(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (inputs.precioPropiedadUf > 0) {
-      handleCalculate();
-    }
-  }, [inputs.precioPropiedadUf, inputs.piePorcentaje, inputs.pieUf, inputs.usarPieUf, inputs.tasaAnual, inputs.plazoAnios]);
   (0, import_react.useEffect)(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(HIPOTECARIO_FORM_STORAGE_KEY, JSON.stringify(inputs));
@@ -22237,9 +22231,6 @@ function App() {
       }
       if (Object.keys(updates).length > 0) {
         setInputs((prev) => ({ ...prev, ...updates }));
-        setTimeout(() => {
-          handleCalculate();
-        }, 100);
       }
     };
     const handleStorageChange = (e) => {
@@ -22400,7 +22391,7 @@ function App() {
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "subhead", children: "Sistema de amortizaci\xF3n franc\xE9s (cuota fija). Calcula dividendo, seguros y tabla completa de pagos en UF." })
       ] }) }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", { className: "layout main-grid", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", { className: "card form-card", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", { id: "form_hipotecario", className: "form", onSubmit: handleCalculate, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", { className: "card form-card", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", { id: "form_hipotecario", className: "form", onSubmit: (e) => handleCalculate(e, true), children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "block", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "block__header", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "block__eyebrow", children: "A) Datos base" }),

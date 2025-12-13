@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   AmortizationResult,
@@ -402,6 +402,11 @@ function App() {
     }
   }, [resultUnit, canShowClp]);
 
+  // Asegurar que la página inicie en la parte superior al cargar
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const handleNumberChange = (field: keyof LoanInputs) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = parseFloat(e.target.value);
     setInputs((prev) => ({ ...prev, [field]: Number.isNaN(next) ? 0 : next }));
@@ -428,7 +433,7 @@ function App() {
     }, 100);
   };
 
-  const handleCalculate = (evt?: React.FormEvent) => {
+  const handleCalculate = (evt?: React.FormEvent, shouldScroll = false) => {
     evt?.preventDefault();
     try {
       const validationErrors = validateInputs(inputs);
@@ -451,30 +456,19 @@ function App() {
       setSummary(summaryData);
       setAmortization(amort);
       setError(null);
-      scrollToResults();
+      if (shouldScroll) {
+        scrollToResults();
+      }
     } catch (err) {
       setSummary(null);
       setAmortization(null);
       setError(err instanceof Error ? err.message : 'Revisa los datos ingresados.');
-      scrollToResults();
+      if (shouldScroll) {
+        scrollToResults();
+      }
     }
   };
 
-  useEffect(() => {
-    handleCalculate();
-  }, []);
-
-  // Recalcular automáticamente cuando cambien los inputs principales (pero no en el primer render)
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (inputs.precioPropiedadUf > 0) {
-      handleCalculate();
-    }
-  }, [inputs.precioPropiedadUf, inputs.piePorcentaje, inputs.pieUf, inputs.usarPieUf, inputs.tasaAnual, inputs.plazoAnios]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -507,10 +501,6 @@ function App() {
       }
       if (Object.keys(updates).length > 0) {
         setInputs((prev) => ({ ...prev, ...updates }));
-        // Calcular automáticamente después de actualizar
-        setTimeout(() => {
-          handleCalculate();
-        }, 100);
       }
     };
 
@@ -683,7 +673,7 @@ function App() {
 
         <main className="layout main-grid">
           <section className="card form-card">
-            <form id="form_hipotecario" className="form" onSubmit={handleCalculate}>
+            <form id="form_hipotecario" className="form" onSubmit={(e) => handleCalculate(e, true)}>
               <div className="block">
                 <div className="block__header">
                   <p className="block__eyebrow">A) Datos base</p>
